@@ -19,12 +19,13 @@
 var Browser = require('browser.js');
 var Classify = require('classify.js');
 var Constants = require('constants.js');
+var Network = require('network.js');
 var Partner = require('partner.js');
 var Size = require('size.js');
 var SpaceCamp = require('space-camp.js');
 var System = require('system.js');
-var Network = require('network.js');
 var Utilities = require('utilities.js');
+var Whoopsie = require('whoopsie.js');
 var EventsService;
 var RenderService;
 
@@ -32,7 +33,6 @@ var RenderService;
 var ConfigValidators = require('config-validators.js');
 var PartnerSpecificValidator = require('open-x-htb-validator.js');
 var Scribe = require('scribe.js');
-var Whoopsie = require('whoopsie.js');
 //? }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -66,12 +66,33 @@ function OpenXHtb(configs) {
      */
     var __profile;
 
+    var __baseAdRequestUrl;
+    var __baseBeaconUrl;
+
     /* =====================================
      * Functions
      * ---------------------------------- */
 
     /* Utilities
      * ---------------------------------- */
+
+    function __fireBeacon(sessionId, data) {
+        var networkParams = {
+            url: __baseBeaconUrl,
+            data: data,
+            method: 'GET',
+            sessionId: sessionId,
+            //? if (DEBUG) {
+            initiatorId: __profile.partnerId
+                //? }
+        };
+
+        if (Network.isXhrSupported()) {
+            Network.ajax(networkParams);
+        } else {
+            Network.img(networkParams);
+        }
+    }
 
     /**
      * Generates the request URL and query data to the endpoint for the xSlots
@@ -82,247 +103,165 @@ function OpenXHtb(configs) {
      * @return {object}
      */
     function __generateRequestObj(returnParcels) {
+        var callbackId = '_' + System.generateUniqueId();
 
-        /* =============================================================================
-         * STEP 2  | Generate Request URL
-         * -----------------------------------------------------------------------------
-         *
-         * Generate the URL to request demand from the partner endpoint using the provided
-         * returnParcels. The returnParcels is an array of objects each object containing
-         * an .xSlotRef which is a reference to the xSlot object from the partner configuration.
-         * Use this to retrieve the placements/xSlots you need to request for.
-         *
-         * If your partner is MRA, returnParcels will be an array of length one. If your
-         * partner is SRA, it will contain any number of entities. In any event, the full
-         * contents of the array should be able to fit into a single request and the
-         * return value of this function should similarly represent a single request to the
-         * endpoint.
-         *
-         * Return an object containing:
-         * queryUrl: the url for the request
-         * data: the query object containing a map of the query string paramaters
-         *
-         * callbackId:
-         *
-         * arbitrary id to match the request with the response in the callback function. If
-         * your endpoint supports passing in an arbitrary ID and returning it as part of the response
-         * please use the callbackType: Partner.CallbackTypes.ID and fill out the adResponseCallback.
-         * Also please provide this adResponseCallback to your bid request here so that the JSONP
-         * response calls it once it has completed.
-         *
-         * If your endpoint does not support passing in an ID, simply use
-         * Partner.CallbackTypes.CALLBACK_NAME and the wrapper will take care of handling request
-         * matching by generating unique callbacks for each request using the callbackId.
-         *
-         * If your endpoint is ajax only, please set the appropriate values in your profile for this,
-         * i.e. Partner.CallbackTypes.NONE and Partner.Requesttypes.AJAX. You also do not need to provide
-         * a callbackId in this case because there is no callback.
-         *
-         * The return object should look something like this:
-         * {
-         *     url: 'http://bidserver.com/api/bids' // base request url for a GET/POST request
-         *     data: { // query string object that will be attached to the base url
-         *        slots: [
-         *             {
-         *                 placementId: 54321,
-         *                 sizes: [[300, 250]]
-         *             },{
-         *                 placementId: 12345,
-         *                 sizes: [[300, 600]]
-         *             },{
-         *                 placementId: 654321,
-         *                 sizes: [[728, 90]]
-         *             }
-         *         ],
-         *         site: 'http://google.com'
-         *     },
-         *     callbackId: '_23sd2ij4i1' //unique id used for pairing requests and responses
-         * }
-         */
+        var auidString = '';
+        var ausString = '';
 
-        /* ---------------------- PUT CODE HERE ------------------------------------ */
-        var queryObj = {};
-        var callbackId = System.generateUniqueId();
+        for (var i = 0; i < returnParcels.length; i++) {
+            auidString += returnParcels[i].xSlotRef.adUnitId.toString() + ',';
+            ausString += Size.arrayToString(returnParcels[i].xSlotRef.sizes, ',') + '|';
+        }
 
-        /* Change this to your bidder endpoint.*/
-        var baseUrl = Browser.getProtocol() + '//someAdapterEndpoint.com/bid';
+        auidString = auidString.slice(0, -1);
+        ausString = ausString.slice(0, -1);
 
-        /* ---------------- Craft bid request using the above returnParcels --------- */
-
-
-        /* -------------------------------------------------------------------------- */
+        var queryObj = {
+            auid: auidString,
+            aus: ausString,
+            ju: Browser.getPageUrl(),
+            jr: Browser.getPageUrl(),
+            ch: configs.charset,
+            tz: System.getTimezoneOffset(),
+            bc: configs.bidderCode,
+            be: configs.trackingEnabled ? 1 : 0,
+            res: Size.arrayToString([
+                [Browser.getScreenWidth(), Browser.getScreenHeight()]
+            ]),
+            tws: Size.arrayToString([
+                [Browser.getViewportWidth(), Browser.getViewportHeight()]
+            ]),
+            ifr: Browser.isTopFrame() ? 0 : 1,
+            callback: 'window.' + SpaceCamp.NAMESPACE + '.OpenXHtb.adResponseCallbacks.' + callbackId,
+            cache: new Date().getTime()
+        };
 
         return {
-            url: baseUrl,
+            url: __baseAdRequestUrl,
             data: queryObj,
             callbackId: callbackId
         };
     }
 
-    /* =============================================================================
-     * STEP 3  | Response callback
-     * -----------------------------------------------------------------------------
-     *
-     * This generator is only necessary if the partner's endpoint has the ability
-     * to return an arbitrary ID that is sent to it. It should retrieve that ID from
-     * the response and save the response to adResponseStore keyed by that ID.
-     *
-     * If the endpoint does not have an appropriate field for this, set the profile's
-     * callback type to CallbackTypes.CALLBACK_NAME and omit this function.
-     */
-    function adResponseCallback(adResponse) {
-        /* get callbackId from adResponse here */
-        var callbackId = 0;
-        __baseClass._adResponseStore[callbackId] = adResponse;
-    }
-    /* -------------------------------------------------------------------------- */
-
     /* Helpers
      * ---------------------------------- */
 
-    /* =============================================================================
-     * STEP 5  | Rendering Pixel
-     * -----------------------------------------------------------------------------
-     *
-    */
-
-     /**
-     * This function will render the pixel given.
-     * @param  {string} pixelUrl Tracking pixel img url.
-     */
-    function __renderPixel(pixelUrl) {
-        if (pixelUrl){
-            Network.img({
-                url: decodeURIComponent(pixelUrl),
-                method: 'GET',
-            });
-        }
-    }
-
-    /**
-     * Parses and extracts demand from adResponse according to the adapter and then attaches it
+    /* Parses and extracts demand from adResponse according to the adapter and then attaches it
      * to the corresponding bid's returnParcel in the correct format using targeting keys.
-     *
-     * @param {string} sessionId The sessionId, used for stats and other events.
-     *
-     * @param {any} adResponse This is the bid response as returned from the bid request, that was either
-     * passed to a JSONP callback or simply sent back via AJAX.
-     *
-     * @param {object[]} returnParcels The array of original parcels, SAME array that was passed to
-     * generateRequestObj to signal which slots need demand. In this funciton, the demand needs to be
-     * attached to each one of the objects for which the demand was originally requested for.
      */
-    function __parseResponse(sessionId, adResponse, returnParcels) {
+    function __parseResponse(sessionId, adResponse, returnParcels, outstandingXSlotNames, startTime, endTime, timedOut) {
+        var unusedReturnParcels = returnParcels.slice();
 
+        var ads = adResponse.ads;
 
-        /* =============================================================================
-         * STEP 4  | Parse & store demand response
-         * -----------------------------------------------------------------------------
-         *
-         * Fill the below variables with information about the bid from the partner, using
-         * the adResponse variable that contains your module adResponse.
-         */
+        if (!ads || !ads.ad || !Utilities.isArray(ads.ad)) {
 
-        /* This an array of all the bids in your response that will be iterated over below. Each of
-         * these will be mapped back to a returnParcel object using some criteria explained below.
-         * The following variables will also be parsed and attached to that returnParcel object as
-         * returned demand.
-         *
-         * Use the adResponse variable to extract your bid information and insert it into the
-         * bids array. Each element in the bids array should represent a single bid and should
-         * match up to a single element from the returnParcel array.
-         *
-         */
+            EventsService.emit('internal_error', __profile.partnerId + ' invalid ad response');
 
-        /* ---------- Process adResponse and extract the bids into the bids array ------------*/
+            if (__profile.enabledAnalytics.requestTime && !timedOut) {
+                __baseClass._emitStatsEvent(sessionId, 'hs_slot_error', outstandingXSlotNames);
+            }
 
-        var bids = adResponse;
+            return;
+        }
 
-        /* --------------------------------------------------------------------------------- */
+        if (ads.pixels) {
+            Browser.createHiddenIFrame(ads.pixels);
+        }
 
-        for (var j = 0; j < returnParcels.length; j++) {
+        var bids = ads.ad;
 
-            var curReturnParcel = returnParcels[j];
+        for (var i = 0; i < bids.length; i++) {
+            var curBid = bids[i];
+            var curReturnParcel;
 
-            var headerStatsInfo = {};
-            var htSlotId = curReturnParcel.htSlot.getId();
-            headerStatsInfo[htSlotId] = {};
-            headerStatsInfo[htSlotId][curReturnParcel.requestId] = [curReturnParcel.xSlotName];
+            /* adUnitId are strings in the configuration, but the openX endpoint return them as numbers */
+            bids[i].adunitid = String(bids[i].adunitid);
 
-            var curBid;
-
-            for (var i = 0; i < bids.length; i++) {
-
-                /**
-                 * This section maps internal returnParcels and demand returned from the bid request.
-                 * In order to match them correctly, they must be matched via some criteria. This
-                 * is usually some sort of placements or inventory codes. Please replace the someCriteria
-                 * key to a key that represents the placement in the configuration and in the bid responses.
-                 */
-
-                /* ----------- Fill this out to find a matching bid for the current parcel ------------- */
-                if (curReturnParcel.xSlotRef.someCriteria === bids[i].someCriteria) {
-                    curBid = bids[i];
-                    bids.splice(i, 1);
+            for (var j = unusedReturnParcels.length - 1; j >= 0; j--) {
+                if (unusedReturnParcels[j].xSlotRef.adUnitId === bids[i].adunitid) {
+                    curReturnParcel = unusedReturnParcels[j];
+                    unusedReturnParcels.splice(j, 1);
                     break;
                 }
             }
 
-            /* No matching bid found so its a pass */
-            if (!curBid) {
-                if (__profile.enabledAnalytics.requestTime) {
-                    __baseClass._emitStatsEvent(sessionId, 'hs_slot_pass', headerStatsInfo);
-                }
-                curReturnParcel.pass = true;
+            if (!curReturnParcel) {
                 continue;
             }
 
-            /* ---------- Fill the bid variables with data from the bid response here. ------------*/
+            var curHtSlotId = curReturnParcel.htSlot.getId();
 
-            /* Using the above variable, curBid, extract various information about the bid and assign it to
-             * these local variables */
+            var beaconData = {};
 
-            /* the bid price for the given slot */
-            var bidPrice = curBid.price;
+            if (curBid.ts) {
+                beaconData.ts = curBid.ts;
+            }
 
-            /* the size of the given slot */
-            var bidSize = [Number(curBid.width), Number(curBid.height)];
+            beaconData.bt = configs.timeout || 0;
+            beaconData.bd = endTime - startTime;
+            beaconData.br = timedOut ? 't' : 'p';
+            beaconData.bs = Browser.getHostname();
 
-            /* the creative/adm for the given slot that will be rendered if is the winner.
-             * Please make sure the URL is decoded and ready to be document.written.
-             */
-            var bidCreative = curBid.adm;
+            if (!curBid.pub_rev || !curBid.html || !curBid.creative || !curBid.creative.length) { //jshint ignore:line
+                EventsService.emit('internal_error', __profile.partnerId + ' invalid ad response');
 
-            /* the dealId if applicable for this slot. */
-            var bidDealId = curBid.dealid;
+                if (__profile.enabledAnalytics.requestTime && !timedOut) {
+                    EventsService.emit('hs_slot_error', {
+                        sessionId: sessionId,
+                        statsId: __profile.statsId,
+                        htSlotId: curHtSlotId,
+                        requestId: curReturnParcel.requestId,
+                        xSlotNames: [curReturnParcel.xSlotName]
+                    });
 
-            /* explicitly pass */
-            var bidIsPass = bidPrice <= 0 ? true : false;
+                    if (outstandingXSlotNames[curHtSlotId] && outstandingXSlotNames[curHtSlotId][curReturnParcel.requestId]) {
+                        Utilities.arrayDelete(outstandingXSlotNames[curHtSlotId][curReturnParcel.requestId], curReturnParcel.xSlotName);
+                    }
+                }
 
-            /* OPTIONAL: tracking pixel url to be fired AFTER rendering a winning creative.
-            * If firing a tracking pixel is not required or the pixel url is part of the adm,
-            * leave empty;
-            */
-            var pixelUrl = '';
+                continue;
+            }
 
-            /* ---------------------------------------------------------------------------------------*/
+            var bidPrice = curBid.pub_rev; //jshint ignore:line
 
-            if (bidIsPass) {
+            beaconData.bp = bidPrice;
+
+            __fireBeacon(sessionId, beaconData);
+
+            if (timedOut) {
+                continue;
+            }
+
+            var bidWidth = Number(curBid.creative[0].width);
+            var bidHeight = Number(curBid.creative[0].height);
+            var bidCreative = curBid.html;
+            var bidDealId = curBid.deal_id ? String(curBid.deal_id) : ''; //jshint ignore:line
+
+            if (bidPrice <= 0 && bidDealId === '') {
                 //? if (DEBUG) {
                 Scribe.info(__profile.partnerId + ' returned pass for { id: ' + adResponse.id + ' }.');
                 //? }
-                if (__profile.enabledAnalytics.requestTime) {
-                    __baseClass._emitStatsEvent(sessionId, 'hs_slot_pass', headerStatsInfo);
-                }
+
                 curReturnParcel.pass = true;
                 continue;
             }
 
             if (__profile.enabledAnalytics.requestTime) {
-                __baseClass._emitStatsEvent(sessionId, 'hs_slot_bid', headerStatsInfo);
+                EventsService.emit('hs_slot_bid', {
+                    sessionId: sessionId,
+                    statsId: __profile.statsId,
+                    htSlotId: curHtSlotId,
+                    requestId: curReturnParcel.requestId,
+                    xSlotNames: [curReturnParcel.xSlotName]
+                });
+
+                if (outstandingXSlotNames[curHtSlotId] && outstandingXSlotNames[curHtSlotId][curReturnParcel.requestId]) {
+                    Utilities.arrayDelete(outstandingXSlotNames[curHtSlotId][curReturnParcel.requestId], curReturnParcel.xSlotName);
+                }
             }
 
-            curReturnParcel.size = bidSize;
+            curReturnParcel.size = [bidWidth, bidHeight];
             curReturnParcel.targetingType = 'slot';
             curReturnParcel.targeting = {};
 
@@ -332,12 +271,11 @@ function OpenXHtb(configs) {
             targetingCpm = __baseClass._bidTransformers.targeting.apply(bidPrice);
             var sizeKey = Size.arrayToString(curReturnParcel.size);
 
-            if (bidDealId) {
-                curReturnParcel.targeting[__baseClass._configs.targetingKeys.pmid] = [sizeKey + '_' + bidDealId];
-                curReturnParcel.targeting[__baseClass._configs.targetingKeys.pm] = [sizeKey + '_' + targetingCpm];
-            } else {
-                curReturnParcel.targeting[__baseClass._configs.targetingKeys.om] = [sizeKey + '_' + targetingCpm];
+            if (bidDealId !== '') {
+                curReturnParcel.targeting[__baseClass._configs.targetingKeys.pm] = [sizeKey + '_' + bidDealId];
             }
+
+            curReturnParcel.targeting[__baseClass._configs.targetingKeys.om] = [sizeKey + '_' + targetingCpm];
             curReturnParcel.targeting[__baseClass._configs.targetingKeys.id] = [curReturnParcel.requestId];
             //? }
 
@@ -356,15 +294,18 @@ function OpenXHtb(configs) {
                 requestId: curReturnParcel.requestId,
                 size: curReturnParcel.size,
                 price: targetingCpm,
-                dealId: bidDealId || undefined,
-                timeOfExpiry: __profile.features.demandExpiry.enabled ? (__profile.features.demandExpiry.value + System.now()) : 0,
-                auxFn: __renderPixel,
-                auxArgs: [pixelUrl]
+                dealId: bidDealId,
+                timeOfExpiry: __profile.features.demandExpiry.enabled ? (__profile.features.demandExpiry.value + System.now()) : 0
             });
 
             //? if (FEATURES.INTERNAL_RENDER) {
             curReturnParcel.targeting.pubKitAdId = pubKitAdId;
             //? }
+        }
+
+        /* any requests that didn't get a response above are passes */
+        if (__profile.enabledAnalytics.requestTime && !timedOut) {
+            __baseClass._emitStatsEvent(sessionId, 'hs_slot_pass', outstandingXSlotNames);
         }
     }
 
@@ -376,19 +317,11 @@ function OpenXHtb(configs) {
         EventsService = SpaceCamp.services.EventsService;
         RenderService = SpaceCamp.services.RenderService;
 
-        /* =============================================================================
-         * STEP 1  | Partner Configuration
-         * -----------------------------------------------------------------------------
-         *
-         * Please fill out the below partner profile according to the steps in the README doc.
-         */
-
-        /* ---------- Please fill out this partner profile according to your module ------------*/
         __profile = {
-            partnerId: 'OpenXHtb', // PartnerName
-            namespace: 'OpenXHtb', // Should be same as partnerName
-            statsId: 'OPNX', // Unique partner identifier
-            version: '2.1.0',
+            partnerId: 'OpenXHtb',
+            namespace: 'OpenXHtb',
+            statsId: 'OPNX',
+            version: '2.1.1',
             targetingType: 'slot',
             enabledAnalytics: {
                 requestTime: true
@@ -403,19 +336,18 @@ function OpenXHtb(configs) {
                     value: 0
                 }
             },
-            targetingKeys: { // Targeting keys for demand, should follow format ix_{statsId}_id
-                id: 'ix_opnx_id',
-                om: 'ix_opnx_cpm',
-                pm: 'ix_opnx_cpm',
-                pmid: 'ix_opnx_dealid'
+            targetingKeys: {
+                id: 'ix_ox_id',
+                om: 'ix_ox_om',
+                pm: 'ix_ox_pm'
             },
-            bidUnitInCents: 1, // The bid price unit (in cents) the endpoint returns, please refer to the readme for details
+            bidUnitInCents: 0.1,
             lineItemType: Constants.LineItemTypes.ID_AND_SIZE,
-            callbackType: Partner.CallbackTypes.ID, // Callback type, please refer to the readme for details
-            architecture: Partner.Architectures.SRA, // Request architecture, please refer to the readme for details
-            requestType: Partner.RequestTypes.ANY // Request type, jsonp, ajax, or any.
+            callbackType: Partner.CallbackTypes.CALLBACK_NAME,
+            architecture: Partner.Architectures.SRA,
+            requestType: Partner.RequestTypes.ANY,
+            parseAfterTimeout: true
         };
-        /* ---------------------------------------------------------------------------------------*/
 
         //? if (DEBUG) {
         var results = ConfigValidators.partnerBaseConfig(configs) || PartnerSpecificValidator(configs);
@@ -425,11 +357,26 @@ function OpenXHtb(configs) {
         }
         //? }
 
+        configs.medium = configs.medium || 'w';
+        configs.version = configs.version || '1.0';
+        configs.endPointName = configs.endPointName || 'arj';
+        configs.charset = configs.charset || 'UTF-8';
+        configs.bidderCode = configs.bidderCode || 'hb_ix';
+
+        __baseAdRequestUrl = Network.buildUrl(Browser.getProtocol() + '//' + configs.host, [configs.medium, configs.version, configs.endPointName]);
+        __baseBeaconUrl = Network.buildUrl(Browser.getProtocol() + '//' + configs.host, [configs.medium, configs.version, 'bo']);
+
         __baseClass = Partner(__profile, configs, null, {
             parseResponse: __parseResponse,
-            generateRequestObj: __generateRequestObj,
-            adResponseCallback: adResponseCallback
+            generateRequestObj: __generateRequestObj
         });
+
+        /* If wrapper is already active, we might be instantiated late so need to add our callback
+           since the shell potentially missed its chance */
+        if (window[SpaceCamp.NAMESPACE]) {
+            window[SpaceCamp.NAMESPACE][__profile.namespace] = window[SpaceCamp.NAMESPACE][__profile.namespace] || {};
+            window[SpaceCamp.NAMESPACE][__profile.namespace].adResponseCallbacks = __baseClass.getDirectInterface()[__profile.namespace].adResponseCallbacks;
+        }
     })();
 
     /* =====================================
@@ -452,17 +399,15 @@ function OpenXHtb(configs) {
          * ---------------------------------- */
 
         //? if (TEST) {
-        profile: __profile,
+        __profile: __profile,
         //? }
 
         /* Functions
          * ---------------------------------- */
 
         //? if (TEST) {
-        parseResponse: __parseResponse,
-        generateRequestObj: __generateRequestObj,
-        adResponseCallback: adResponseCallback,
-        //? }
+        __parseResponse: __parseResponse
+            //? }
     };
 
     return Classify.derive(__baseClass, derivedClass);

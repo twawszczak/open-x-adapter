@@ -120,11 +120,11 @@ function OpenXHtb(configs) {
             auid: auidString,
             aus: ausString,
             ju: Browser.getPageUrl(),
-            jr: Browser.getPageUrl(),
+            jr: Browser.getReferrer(),
             ch: configs.charset,
             tz: System.getTimezoneOffset(),
-            bc: configs.bidderCode,
-            be: configs.trackingEnabled ? 1 : 0,
+            bc: 'hb_ix',
+            be: 1,
             res: Size.arrayToString([
                 [Browser.getScreenWidth(), Browser.getScreenHeight()]
             ]),

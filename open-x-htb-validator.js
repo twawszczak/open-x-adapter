@@ -50,15 +50,6 @@ var partnerValidator = function (configs) {
                 type: 'string',
                 minLength: 1
             },
-            bidderCode: {
-                optional: true,
-                type: 'string',
-                minLength: 1
-            },
-            trackingEnabled: {
-                optional: true,
-                type: 'boolean'
-            },
             xSlots: {
                 type: 'object',
                 properties: {

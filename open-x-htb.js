@@ -28,6 +28,7 @@ var Utilities = require('utilities.js');
 var Whoopsie = require('whoopsie.js');
 var EventsService;
 var RenderService;
+var ComplianceService;
 
 //? if (DEBUG) {
 var ConfigValidators = require('config-validators.js');
@@ -103,44 +104,65 @@ function OpenXHtb(configs) {
      * @return {object}
      */
     function __generateRequestObj(returnParcels) {
-        var callbackId = '_' + System.generateUniqueId();
+      var callbackId = '_' + System.generateUniqueId();
 
-        var auidString = '';
-        var ausString = '';
+      var auidString = '';
+      var ausString = '';
 
-        for (var i = 0; i < returnParcels.length; i++) {
-            auidString += returnParcels[i].xSlotRef.adUnitId.toString() + ',';
-            ausString += Size.arrayToString(returnParcels[i].xSlotRef.sizes, ',') + '|';
+      /**
+       * @typedef {{
+       *  applies: boolean,
+       *  consentString: string
+       *  }}
+       */
+      var gdprConsent = ComplianceService.gdpr.getConsent();
+      var gdprPrivacyEnabled = ComplianceService.isPrivacyEnabled();
+
+
+
+      for (var i = 0; i < returnParcels.length; i++) {
+        auidString += returnParcels[i].xSlotRef.adUnitId.toString() + ',';
+        ausString += Size.arrayToString(returnParcels[i].xSlotRef.sizes, ',') + '|';
+      }
+
+      auidString = auidString.slice(0, -1);
+      ausString = ausString.slice(0, -1);
+
+      var queryObj = {
+        auid: auidString,
+        aus: ausString,
+        ju: Browser.getPageUrl(),
+        jr: Browser.getReferrer(),
+        ch: configs.charset,
+        tz: System.getTimezoneOffset(),
+        bc: 'hb_ix',
+        be: 1,
+        res: Size.arrayToString([
+          [Browser.getScreenWidth(), Browser.getScreenHeight()]
+        ]),
+        tws: Size.arrayToString([
+          [Browser.getViewportWidth(), Browser.getViewportHeight()]
+        ]),
+        ifr: Browser.isTopFrame() ? 0 : 1,
+        callback: 'window.' + SpaceCamp.NAMESPACE + '.OpenXHtb.adResponseCallbacks.' + callbackId,
+        cache: new Date().getTime()
+      };
+
+      if (gdprPrivacyEnabled) {
+        if (gdprConsent.consentString !== void(0)) {
+          queryObj.gdpr_consent = gdprConsent.consentString;
         }
 
-        auidString = auidString.slice(0, -1);
-        ausString = ausString.slice(0, -1);
+        if (gdprConsent.applies !== void(0)) {
+          queryObj.gdpr = gdprConsent.applies ? '1' : '0';
+        }
+      }
 
-        var queryObj = {
-            auid: auidString,
-            aus: ausString,
-            ju: Browser.getPageUrl(),
-            jr: Browser.getReferrer(),
-            ch: configs.charset,
-            tz: System.getTimezoneOffset(),
-            bc: 'hb_ix',
-            be: 1,
-            res: Size.arrayToString([
-                [Browser.getScreenWidth(), Browser.getScreenHeight()]
-            ]),
-            tws: Size.arrayToString([
-                [Browser.getViewportWidth(), Browser.getViewportHeight()]
-            ]),
-            ifr: Browser.isTopFrame() ? 0 : 1,
-            callback: 'window.' + SpaceCamp.NAMESPACE + '.OpenXHtb.adResponseCallbacks.' + callbackId,
-            cache: new Date().getTime()
-        };
-
-        return {
-            url: __baseAdRequestUrl,
-            data: queryObj,
-            callbackId: callbackId
-        };
+      return {
+        url: __baseAdRequestUrl,
+        data: queryObj,
+        callbackId: callbackId
+      };
     }
 
     /* Helpers
@@ -152,7 +174,18 @@ function OpenXHtb(configs) {
     function __parseResponse(sessionId, adResponse, returnParcels, outstandingXSlotNames, startTime, endTime, timedOut) {
         var unusedReturnParcels = returnParcels.slice();
 
-        var ads = adResponse.ads;
+      /**
+       * @typedef {{
+       *  applies: boolean,
+       *  consentString: string
+       *  }}
+       */
+      var gdprConsent = ComplianceService.gdpr.getConsent();
+      var gdprPrivacyEnabled = ComplianceService.isPrivacyEnabled();
+
+
+
+      var ads = adResponse.ads;
 
         if (!ads || !ads.ad || !Utilities.isArray(ads.ad)) {
 
@@ -166,7 +199,17 @@ function OpenXHtb(configs) {
         }
 
         if (ads.pixels) {
-            Browser.createHiddenIFrame(ads.pixels);
+          if(gdprPrivacyEnabled){
+            if (gdprConsent.consentString !== void(0)) {
+              ads.pixels += '&gdpr_consent=' + gdprConsent.consentString;
+            }
+
+            if (gdprConsent.applies !== void(0)) {
+              ads.pixels += '&gdpr=' + (gdprConsent.applies ? '1' : '0');
+            }
+          }
+
+          Browser.createHiddenIFrame(ads.pixels);
         }
 
         var bids = ads.ad;
@@ -316,8 +359,9 @@ function OpenXHtb(configs) {
     (function __constructor() {
         EventsService = SpaceCamp.services.EventsService;
         RenderService = SpaceCamp.services.RenderService;
+        ComplianceService = SpaceCamp.services.ComplianceService;
 
-        __profile = {
+      __profile = {
             partnerId: 'OpenXHtb',
             namespace: 'OpenXHtb',
             statsId: 'OPNX',

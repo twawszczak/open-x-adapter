@@ -1,11 +1,11 @@
 shellInterface.OpenXHtb = {
     adResponseCallbacks: {}
-}
+};
 
 //? if(FEATURES.GPT_LINE_ITEMS) {
 shellInterface.OpenXHtb.render = SpaceCamp.services.RenderService.renderDfpAd.bind(null, 'OpenXHtb');
 
-/* backwards-compatible alternate function name */
+/* Backwards-compatible alternate function name */
 shellInterface.OpenXModule = {
     render: shellInterface.OpenXHtb.render
 };

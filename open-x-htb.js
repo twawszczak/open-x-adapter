@@ -336,7 +336,8 @@ function OpenXHtb(configs) {
             var sizeKey = Size.arrayToString(curReturnParcel.size);
 
             if (bidDealId !== '') {
-                curReturnParcel.targeting[__baseClass._configs.targetingKeys.pm] = [sizeKey + '_' + bidDealId];
+                curReturnParcel.targeting[__baseClass._configs.targetingKeys.pm] = [sizeKey + '_' + bidPrice];
+                curReturnParcel.targeting[__baseClass._configs.targetingKeys.pmid] = [sizeKey + '_' + bidDealId];
             }
 
             curReturnParcel.targeting[__baseClass._configs.targetingKeys.om] = [sizeKey + '_' + targetingCpm];

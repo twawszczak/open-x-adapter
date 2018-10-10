@@ -119,6 +119,8 @@ function OpenXHtb(configs) {
         var gdprConsent = ComplianceService.gdpr.getConsent();
         var gdprPrivacyEnabled = ComplianceService.isPrivacyEnabled();
 
+        var tradeDeskId = null;
+
         for (var i = 0; i < returnParcels.length; i++) {
             auidString += returnParcels[i].xSlotRef.adUnitId.toString() + ',';
             ausString += Size.arrayToString(returnParcels[i].xSlotRef.sizes, ',') + '|';
@@ -126,6 +128,21 @@ function OpenXHtb(configs) {
 
         auidString = auidString.slice(0, -1);
         ausString = ausString.slice(0, -1);
+
+        var identityData = returnParcels[0] && returnParcels[0].identityData;
+
+        if (identityData && identityData.AdserverOrgIp && identityData.AdserverOrgIp.data) {
+            var adsrvrUids = identityData.AdserverOrgIp.data.uids;
+            if (Utilities.isArray(adsrvrUids)) {
+                for (var j = 0; j < adsrvrUids.length; j++) {
+                    if (adsrvrUids[j].ext && adsrvrUids[j].ext.rtiPartner === 'TDID') {
+                        tradeDeskId = adsrvrUids[j].id;
+
+                        break;
+                    }
+                }
+            }
+        }
 
         var queryObj = {
             auid: auidString,
@@ -143,6 +160,10 @@ function OpenXHtb(configs) {
             cache: new Date()
                 .getTime()
         };
+
+        if (tradeDeskId) {
+            queryObj.ttduuid = tradeDeskId;
+        }
 
         if (gdprPrivacyEnabled) {
             if (gdprConsent.consentString !== void(0)) { // eslint-disable-line
@@ -384,7 +405,8 @@ function OpenXHtb(configs) {
             targetingKeys: {
                 id: 'ix_ox_id',
                 om: 'ix_ox_om',
-                pm: 'ix_ox_pm'
+                pm: 'ix_ox_pm',
+                pmid: 'ix_ox_pmid'
             },
             bidUnitInCents: 0.1,
             lineItemType: Constants.LineItemTypes.ID_AND_SIZE,

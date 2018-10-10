@@ -1,0 +1,192 @@
+'use strict';
+
+function getPartnerId() {
+    return 'OpenXHtb';
+}
+
+function getStatsId() {
+    return 'OPNX';
+}
+
+function getCallbackType() {
+    return 'NAME';
+}
+
+function getArchitecture() {
+    return 'SRA';
+}
+
+function getConfig() {
+    return {
+        1: {
+            adUnitId: '54321',
+            sizes: [[300, 250], [300, 600]]
+        },
+        2: {
+            adUnitId: '12345',
+            sizes: [[300, 600]]
+        },
+        3: {
+            adUnitId: '654321',
+            sizes: [[728, 90]]
+        }
+    };
+}
+
+function getBidRequestRegex() {
+    return {
+        method: 'GET',
+        urlRegex: /.*openx\.net\/w\/1\.0\/arj\?.*/
+    };
+}
+
+function validateBidRequest(request) {
+    // Check query string parameters.
+    expect(request.query.auid).toBe('54321,12345,654321');
+    expect(request.query.aus).toBe('300x250,300x600|300x600|728x90');
+}
+
+function getValidResponse(request, creative) {
+    var adm = creative || '<a target="_blank" href="http://www.indexexchange.com"><div style="text-decoration: none; color: black; width: 300px; height:250px;background-color: #336eff;"; id="testDiv"><h1>&lt;header_tag&gt; certification testing: 1_1a1a1a1a, deal: 12346 (211474080)width: 300px; height:250px <iframe src="http://as.casalemedia.com/ifnotify?dfp_1_1a1a1a1a&referer=http://127.0.0.1:3000/p/DfpAuto/nonPrefetch/test?dev=desktop&displayMode=SRA&req=211474080" width="0" height="0" frameborder="0" scrolling="no" style="display:none;" marginheight="0" marginwidth="0"></iframe></h1></div><script>var thisDiv = document.getElementById("testDiv");thisDiv.style.fontFamily="verdana";</script></a>';
+    var response = {
+        ads: {
+            ad: [
+                {
+                    adunitid: 54321,
+                    pub_rev: '100',
+                    html: adm,
+                    creative: [
+                        {
+                            width: '300',
+                            height: '250'
+                        }
+                    ]
+                },
+                {
+                    adunitid: 12345,
+                    pub_rev: '200',
+                    html: adm,
+                    creative: [
+                        {
+                            width: '300',
+                            height: '600'
+                        }
+                    ]
+                },
+                {
+                    adunitid: 654321,
+                    pub_rev: '100',
+                    html: adm,
+                    creative: [
+                        {
+                            width: '728',
+                            height: '90'
+                        }
+                    ]
+                }
+            ]
+        }
+    };
+
+    return 'headertag.OpenXHtb.adResponseCallback(' + JSON.stringify(response) + ')';
+}
+
+function validateTargeting(targetingMap) {
+    expect(targetingMap).toEqual(jasmine.objectContaining({
+        ix_ox_om: jasmine.arrayContaining([
+            '300x250_100',
+            '300x600_200',
+            '728x90_100'
+        ]),
+        ix_ox_id: jasmine.arrayContaining([jasmine.any(String)])
+    }));
+}
+
+function getPassResponse(request) {
+    return 'headertag.OpenXHtb.adResponseCallback({"id": "'
+      + JSON.parse(request.query.callback) + '"});';
+}
+
+function getValidResponseWithDeal(request, creative) {
+    var adm = creative || '<a target="_blank" href="http://www.indexexchange.com"><div style="text-decoration: none; color: black; width: 300px; height:250px;background-color: #336eff;"; id="testDiv"><h1>&lt;header_tag&gt; certification testing: 1_1a1a1a1a, deal: 12346 (211474080)width: 300px; height:250px <iframe src="http://as.casalemedia.com/ifnotify?dfp_1_1a1a1a1a&referer=http://127.0.0.1:3000/p/DfpAuto/nonPrefetch/test?dev=desktop&displayMode=SRA&req=211474080" width="0" height="0" frameborder="0" scrolling="no" style="display:none;" marginheight="0" marginwidth="0"></iframe></h1></div><script>var thisDiv = document.getElementById("testDiv");thisDiv.style.fontFamily="verdana";</script></a>';
+    var response = {
+        ads: {
+            ad: [
+                {
+                    adunitid: 54321,
+                    pub_rev: '100',
+                    html: adm,
+                    deal_id: 1,
+                    creative: [
+                        {
+                            width: '300',
+                            height: '250'
+                        }
+                    ]
+                },
+                {
+                    adunitid: 12345,
+                    pub_rev: '200',
+                    html: adm,
+                    deal_id: 2,
+                    creative: [
+                        {
+                            width: '300',
+                            height: '600'
+                        }
+                    ]
+                },
+                {
+                    adunitid: 654321,
+                    pub_rev: '100',
+                    html: adm,
+                    deal_id: 2,
+                    creative: [
+                        {
+                            width: '728',
+                            height: '90'
+                        }
+                    ]
+                }
+            ]
+        }
+    };
+
+    return 'headertag.OpenXHtb.adResponseCallback(' + JSON.stringify(response) + ')';
+}
+
+function validateTargetingWithDeal(targetingMap) {
+    expect(targetingMap).toEqual(jasmine.objectContaining({
+        ix_ox_pm: jasmine.arrayContaining([
+            '300x250_100',
+            '300x600_200',
+            '728x90_100'
+        ]),
+        ix_ox_pmid: jasmine.arrayContaining([
+            '1',
+            '2',
+            '2'
+        ]),
+        ix_ox_id: jasmine.arrayContaining([jasmine.any(String)])
+    }));
+}
+
+function validatePixelRequests(pixelRequests) {
+    expect(pixelRequests[0].toString()).toMatch(/.*as(-sec)?\.casalemedia\.com\/ifnotify.*/);
+}
+
+module.exports = {
+    getPartnerId: getPartnerId,
+    getStatsId: getStatsId,
+    getBidRequestRegex: getBidRequestRegex,
+    getCallbackType: getCallbackType,
+    getConfig: getConfig,
+    validateBidRequest: validateBidRequest,
+    getValidResponse: getValidResponse,
+    validateTargeting: validateTargeting,
+    getArchitecture: getArchitecture,
+    validatePixelRequests: validatePixelRequests,
+    getPassResponse: getPassResponse,
+    getValidResponseWithDeal: getValidResponseWithDeal,
+    validateTargetingWithDeal: validateTargetingWithDeal
+};

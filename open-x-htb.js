@@ -151,7 +151,7 @@ function OpenXHtb(configs) {
             jr: Browser.getReferrer(),
             ch: configs.charset,
             tz: System.getTimezoneOffset(),
-            bc: 'hb_ix',
+            bc: 'hb_ix_' + __profile.version,
             be: 1,
             res: Size.arrayToString([[Browser.getScreenWidth(), Browser.getScreenHeight()]]),
             tws: Size.arrayToString([[Browser.getViewportWidth(), Browser.getViewportHeight()]]),
@@ -388,7 +388,7 @@ function OpenXHtb(configs) {
             partnerId: 'OpenXHtb',
             namespace: 'OpenXHtb',
             statsId: 'OPNX',
-            version: '2.1.1',
+            version: '2.1.2',
             targetingType: 'slot',
             enabledAnalytics: {
                 requestTime: true
@@ -453,6 +453,8 @@ function OpenXHtb(configs) {
             window[SpaceCamp.NAMESPACE][__profile.namespace] = window[SpaceCamp.NAMESPACE][__profile.namespace] || {};
             window[SpaceCamp.NAMESPACE][__profile.namespace].adResponseCallbacks
                 = __baseClass.getDirectInterface()[__profile.namespace].adResponseCallbacks;
+            window[SpaceCamp.NAMESPACE][__profile.namespace].version
+                = __profile.version;
         }
     })();
 

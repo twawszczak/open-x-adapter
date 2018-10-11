@@ -1,5 +1,6 @@
 shellInterface.OpenXHtb = {
-    adResponseCallbacks: {}
+    adResponseCallbacks: {},
+    version: '2.1.2'
 };
 
 //? if(FEATURES.GPT_LINE_ITEMS) {
@@ -14,4 +15,5 @@ shellInterface.OpenXModule = {
 if (__directInterface.Layers.PartnersLayer.Partners.OpenXHtb) {
     shellInterface.OpenXHtb = shellInterface.OpenXHtb || {};
     shellInterface.OpenXHtb.adResponseCallbacks = __directInterface.Layers.PartnersLayer.Partners.OpenXHtb.adResponseCallbacks;
+    shellInterface.OpenXHtb.version = __directInterface.Layers.PartnersLayer.Partners.OpenXHtb.version;
 }

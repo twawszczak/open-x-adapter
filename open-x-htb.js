@@ -157,8 +157,7 @@ function OpenXHtb(configs) {
             tws: Size.arrayToString([[Browser.getViewportWidth(), Browser.getViewportHeight()]]),
             ifr: Browser.isTopFrame() ? 0 : 1,
             callback: 'window.' + SpaceCamp.NAMESPACE + '.OpenXHtb.adResponseCallbacks.' + callbackId,
-            cache: new Date()
-                .getTime()
+            cache: System.now()
         };
 
         if (tradeDeskId) {

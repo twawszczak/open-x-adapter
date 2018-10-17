@@ -18,17 +18,16 @@ function getArchitecture() {
 
 function getConfig() {
     return {
-        1: {
-            adUnitId: '54321',
-            sizes: [[300, 250], [300, 600]]
-        },
-        2: {
-            adUnitId: '12345',
-            sizes: [[300, 600]]
-        },
-        3: {
-            adUnitId: '654321',
-            sizes: [[728, 90]]
+        host: 'mock-ox-del-domain.openx.net',
+        xSlots: {
+            1: {
+                adUnitId: '54321',
+                sizes: [[300, 250], [300, 600]]
+            },
+            2: {
+                adUnitId: '12345',
+                sizes: [[300, 600]]
+            }
         }
     };
 }
@@ -42,8 +41,10 @@ function getBidRequestRegex() {
 
 function validateBidRequest(request) {
     // Check query string parameters.
-    expect(request.query.auid).toBe('54321,12345,654321');
-    expect(request.query.aus).toBe('300x250,300x600|300x600|728x90');
+    expect(request.query.auid).toBe('54321,12345');
+    expect(request.query.aus).toBe('300x250,300x600|300x600');
+    expect(request.query.bc).toBe('hb_ix_2.1.2');
+    expect(request.query.be).toBe('1');
 }
 
 function getValidResponse(request, creative) {
@@ -53,7 +54,7 @@ function getValidResponse(request, creative) {
             ad: [
                 {
                     adunitid: 54321,
-                    pub_rev: '100',
+                    pub_rev: '1000',
                     html: adm,
                     creative: [
                         {
@@ -64,7 +65,7 @@ function getValidResponse(request, creative) {
                 },
                 {
                     adunitid: 12345,
-                    pub_rev: '200',
+                    pub_rev: '2000',
                     html: adm,
                     creative: [
                         {
@@ -72,39 +73,29 @@ function getValidResponse(request, creative) {
                             height: '600'
                         }
                     ]
-                },
-                {
-                    adunitid: 654321,
-                    pub_rev: '100',
-                    html: adm,
-                    creative: [
-                        {
-                            width: '728',
-                            height: '90'
-                        }
-                    ]
                 }
             ]
         }
     };
 
-    return 'headertag.OpenXHtb.adResponseCallback(' + JSON.stringify(response) + ')';
+    return request.query.callback + '(' + JSON.stringify(response) + ')';
 }
 
 function validateTargeting(targetingMap) {
     expect(targetingMap).toEqual(jasmine.objectContaining({
-        ix_ox_om: jasmine.arrayContaining([
-            '300x250_100',
-            '300x600_200',
-            '728x90_100'
-        ]),
+        ix_ox_om: jasmine.arrayContaining(['300x250_100', '300x600_200']),
         ix_ox_id: jasmine.arrayContaining([jasmine.any(String)])
     }));
 }
 
 function getPassResponse(request) {
-    return 'headertag.OpenXHtb.adResponseCallback({"id": "'
-      + JSON.parse(request.query.callback) + '"});';
+    var response = {
+        ads: {
+            ad: []
+        }
+    };
+
+    return request.query.callback + '(' + JSON.stringify(response) + ')';
 }
 
 function getValidResponseWithDeal(request, creative) {
@@ -135,44 +126,20 @@ function getValidResponseWithDeal(request, creative) {
                             height: '600'
                         }
                     ]
-                },
-                {
-                    adunitid: 654321,
-                    pub_rev: '100',
-                    html: adm,
-                    deal_id: 2,
-                    creative: [
-                        {
-                            width: '728',
-                            height: '90'
-                        }
-                    ]
                 }
             ]
         }
     };
 
-    return 'headertag.OpenXHtb.adResponseCallback(' + JSON.stringify(response) + ')';
+    return request.query.callback + '(' + JSON.stringify(response) + ')';
 }
 
 function validateTargetingWithDeal(targetingMap) {
     expect(targetingMap).toEqual(jasmine.objectContaining({
-        ix_ox_pm: jasmine.arrayContaining([
-            '300x250_100',
-            '300x600_200',
-            '728x90_100'
-        ]),
-        ix_ox_pmid: jasmine.arrayContaining([
-            '1',
-            '2',
-            '2'
-        ]),
+        ix_ox_pm: jasmine.arrayContaining(['300x250_100', '300x600_200']),
+        ix_ox_pmid: jasmine.arrayContaining(['300x250_1', '300x600_2']),
         ix_ox_id: jasmine.arrayContaining([jasmine.any(String)])
     }));
-}
-
-function validatePixelRequests(pixelRequests) {
-    expect(pixelRequests[0].toString()).toMatch(/.*as(-sec)?\.casalemedia\.com\/ifnotify.*/);
 }
 
 module.exports = {
@@ -185,7 +152,6 @@ module.exports = {
     getValidResponse: getValidResponse,
     validateTargeting: validateTargeting,
     getArchitecture: getArchitecture,
-    validatePixelRequests: validatePixelRequests,
     getPassResponse: getPassResponse,
     getValidResponseWithDeal: getValidResponseWithDeal,
     validateTargetingWithDeal: validateTargetingWithDeal

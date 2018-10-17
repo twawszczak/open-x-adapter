@@ -204,6 +204,10 @@ This section involves setting up the general partner configuration such as name,
     * <u>om</u> - This key signals the open market bid in CPM.
     * <u>pm</u> - This key signals the private market bid in CPM.
     * <u>pmid</u> - This key signals the private market deal id.
+    ```
+    OpenX use pm as private market bid targeting, e.g. ix_ox_pm=300x250_1.
+    p.s.: targeting value is composed of **ad unit size**: 300x250 and **deal_id**: 1
+    ```
 * <u>bidUnitInCents</u> - This tells the wrapper the unit of the bid price returned by your endpoint. The unit is in terms of cents, thus it should be set to 100 if your endpoint returns dollars, 1 if your endpoint returns cents, 0.1 if your endpoint returns tenth of a cent, etc. Note that this value must be an integer power of 10.
 
 The last three properties are critical for the wrapper to understand how to interact with the endpoint:

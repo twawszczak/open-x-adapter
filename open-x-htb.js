@@ -336,8 +336,7 @@ function OpenXHtb(configs) {
             var sizeKey = Size.arrayToString(curReturnParcel.size);
 
             if (bidDealId !== '') {
-                curReturnParcel.targeting[__baseClass._configs.targetingKeys.pm] = [sizeKey + '_' + bidPrice];
-                curReturnParcel.targeting[__baseClass._configs.targetingKeys.pmid] = [sizeKey + '_' + bidDealId];
+                curReturnParcel.targeting[__baseClass._configs.targetingKeys.pm] = [sizeKey + '_' + bidDealId];
             }
 
             curReturnParcel.targeting[__baseClass._configs.targetingKeys.om] = [sizeKey + '_' + targetingCpm];
@@ -406,8 +405,7 @@ function OpenXHtb(configs) {
             targetingKeys: {
                 id: 'ix_ox_id',
                 om: 'ix_ox_om',
-                pm: 'ix_ox_pm',
-                pmid: 'ix_ox_pmid'
+                pm: 'ix_ox_pm'
             },
             bidUnitInCents: 0.1,
             lineItemType: Constants.LineItemTypes.ID_AND_SIZE,

@@ -136,8 +136,7 @@ function getValidResponseWithDeal(request, creative) {
 
 function validateTargetingWithDeal(targetingMap) {
     expect(targetingMap).toEqual(jasmine.objectContaining({
-        ix_ox_pm: jasmine.arrayContaining(['300x250_100', '300x600_200']),
-        ix_ox_pmid: jasmine.arrayContaining(['300x250_1', '300x600_2']),
+        ix_ox_pm: jasmine.arrayContaining(['300x250_1', '300x600_2']),
         ix_ox_id: jasmine.arrayContaining([jasmine.any(String)])
     }));
 }

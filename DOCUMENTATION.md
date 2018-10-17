@@ -30,7 +30,7 @@
 | Ad Server Responds in (Cents, Dollars, etc) | 10 cent (a.k.a. 2000 = 2 dollar) |
 | Bid Type (Gross / Net) | Net |
 | GAM Key (Open Market) | ix_ox_om |
-| GAM Key (Private Market) | ix_ox_pm && ix_ox_pmid |
+| GAM Key (Private Market) | ix_ox_pm |
 | Ad Server URLs | http(s)://valid_host_name/w/1.0/arj? |
 | Slot Mapping Sytle (Size / Multiple Sizes / Slot) | Multiple Sizes |
 | Request Architecture (MRA / SRA) | SRA |

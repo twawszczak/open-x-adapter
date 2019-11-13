@@ -433,7 +433,7 @@ function OpenXHtb(configs) {
             configs.version,
             configs.endPointName
         ]);
-        __baseBeaconUrl = Network.buildUrl( 'https://' + configs.host, [
+        __baseBeaconUrl = Network.buildUrl('https://' + configs.host, [
             configs.medium,
             configs.version,
             'bo'

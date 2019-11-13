@@ -31,7 +31,7 @@
 | Bid Type (Gross / Net) | Net |
 | GAM Key (Open Market) | ix_ox_om |
 | GAM Key (Private Market) | ix_ox_pm |
-| Ad Server URLs | http(s)://valid_host_name/w/1.0/arj? |
+| Ad Server URLs | https://valid_host_name/w/1.0/arj? |
 | Slot Mapping Sytle (Size / Multiple Sizes / Slot) | Multiple Sizes |
 | Request Architecture (MRA / SRA) | SRA |
  
@@ -48,7 +48,7 @@
  
 ### Example
 ```javascript
-http(s)://valid_host_name/w/1.0/arj?auid=54321%2C12345&aus=300x250%2C300x600%7C300x600&bc=hb_ix_2.1.2&be=1&ju=http%3A%2F%2Flocalhost%3A5837%2Fpublic%2Fdebugger%2Fadapter-debugger.html&jr=http%3A%2F%2Flocalhost%3A5837%2Fpublic%2Fdebugger%2Fadapter-debugger.html&ch=UTF-8&tz=420&res=1440x900&tws=1303x347&ifr=1&callback=window.headertag.OpenXHtb.adResponseCallbacks._Bo02nxzC&cache=1539218162700&gdpr_consent=TEST_GDPR_CONSENT_STRING&gdpr=1
+https://valid_host_name/w/1.0/arj?auid=54321%2C12345&aus=300x250%2C300x600%7C300x600&bc=hb_ix_2.1.3&be=1&ju=http%3A%2F%2Flocalhost%3A5837%2Fpublic%2Fdebugger%2Fadapter-debugger.html&jr=http%3A%2F%2Flocalhost%3A5837%2Fpublic%2Fdebugger%2Fadapter-debugger.html&ch=UTF-8&tz=420&res=1440x900&tws=1303x347&ifr=1&callback=window.headertag.OpenXHtb.adResponseCallbacks._Bo02nxzC&cache=1539218162700&gdpr_consent=TEST_GDPR_CONSENT_STRING&gdpr=1
 ```
  
 ## Bid Response Information

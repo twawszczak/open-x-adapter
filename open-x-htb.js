@@ -386,7 +386,7 @@ function OpenXHtb(configs) {
             partnerId: 'OpenXHtb',
             namespace: 'OpenXHtb',
             statsId: 'OPNX',
-            version: '2.1.2',
+            version: '2.1.3',
             targetingType: 'slot',
             enabledAnalytics: {
                 requestTime: true
@@ -428,12 +428,12 @@ function OpenXHtb(configs) {
         configs.charset = configs.charset || 'UTF-8';
         configs.bidderCode = configs.bidderCode || 'hb_ix';
 
-        __baseAdRequestUrl = Network.buildUrl(Browser.getProtocol() + '//' + configs.host, [
+        __baseAdRequestUrl = Network.buildUrl('https://' + configs.host, [
             configs.medium,
             configs.version,
             configs.endPointName
         ]);
-        __baseBeaconUrl = Network.buildUrl(Browser.getProtocol() + '//' + configs.host, [
+        __baseBeaconUrl = Network.buildUrl( 'https://' + configs.host, [
             configs.medium,
             configs.version,
             'bo'

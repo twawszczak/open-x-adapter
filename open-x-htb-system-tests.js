@@ -43,7 +43,7 @@ function validateBidRequest(request) {
     // Check query string parameters.
     expect(request.query.auid).toBe('54321,12345');
     expect(request.query.aus).toBe('300x250,300x600|300x600');
-    expect(request.query.bc).toBe('hb_ix_2.1.2');
+    expect(request.query.bc).toBe('hb_ix_2.1.3');
     expect(request.query.be).toBe('1');
 }
 

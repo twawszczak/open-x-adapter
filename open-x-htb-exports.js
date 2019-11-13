@@ -1,6 +1,6 @@
 shellInterface.OpenXHtb = {
     adResponseCallbacks: {},
-    version: '2.1.2'
+    version: '2.1.3'
 };
 
 //? if(FEATURES.GPT_LINE_ITEMS) {
